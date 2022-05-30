@@ -12,6 +12,7 @@ public class Subnetting {
     private static int MAX_NETWORKS;
 
     private static final List<String> addressList = new ArrayList<>();
+    private static final List<String> endAddressList = new ArrayList<>();
 
     public static void create(String ipAddress, String netMask, int subnetCount){
 
@@ -32,12 +33,31 @@ public class Subnetting {
 
         MAX_NETWORKS = subnetCount;
 
-        System.out.println("\n" + generateNewIpAddressRange() + "\n");
+        generateNewIpAddressRange();
+        getWildcardMask();
+        getNumberOfHosts();
+
         generateIpAddress();
 
     }
 
-    private static String generateNewIpAddressRange(){
+    private static void getWildcardMask(){
+        byte[] wildCardMask = new byte[BINARY_NET_MASK.length];
+
+        for(int i = 0; i < BINARY_NET_MASK.length; i++){
+            wildCardMask[i] = (byte) (BINARY_NET_MASK[i] == 0x00 ? 0x01 : 0x00);
+        }
+
+        System.out.println("Wildcard mask: \t" + byteToIpAddress(wildCardMask));
+    }
+    private static void getNumberOfHosts(){
+        int remainingBits = BINARY_NET_MASK.length - getBitIndex();
+        int maxHosts = (int)(Math.pow(2, remainingBits)) / MAX_NETWORKS;
+
+        System.out.println("Hosts: \t\t\t" + maxHosts + "\n");
+    }
+
+    private static void generateNewIpAddressRange(){
 
         String firstIpAddress;
         String lastIpAddress;
@@ -60,7 +80,7 @@ public class Subnetting {
 
         lastIpAddress = byteToIpAddress(BINARY_IP_ADDRESS);
 
-        return "Address range: " + firstIpAddress + " - " + lastIpAddress;
+        System.out.println("\nAddress range: \t" + firstIpAddress + " - " + lastIpAddress);
     }
     private static void generateIpAddress(){
 
@@ -97,10 +117,12 @@ public class Subnetting {
             addressList.add(byteToIpAddress(BINARY_IP_ADDRESS));
 
             for(int j = 0; j < BINARY_IP_ADDRESS.length; j++){
-                if(j >= (index + binary.length())){
+                if(j >= (index + getMaxBits(MAX_NETWORKS))){
                     BINARY_IP_ADDRESS[j] = 0x01;
                 }
             }
+
+            endAddressList.add(byteToIpAddress(BINARY_IP_ADDRESS));
 
             resetChangedIpAddress();
         }
@@ -114,9 +136,18 @@ public class Subnetting {
 
             return formattedIp1.compareTo(formattedIp2);
         });
+        endAddressList.sort((o1, o2) -> {
+            String[] ip1 = o1.split("\\.");
+            String[] ip2 = o2.split("\\.");
 
-        for(String item : addressList){
-            System.out.println(item);
+            String formattedIp1 = String.format("%3s.%3s.%3s.%3s", ip1[0], ip1[1], ip1[2], ip1[3]);
+            String formattedIp2 = String.format("%3s.%3s.%3s.%3s", ip2[0], ip2[1], ip2[2], ip2[3]);
+
+            return formattedIp1.compareTo(formattedIp2);
+        });
+
+        for(int i = 0; i < addressList.size(); i++){
+            System.out.println(addressList.get(i) + " - " + endAddressList.get(i));
         }
 
     }
@@ -225,6 +256,18 @@ public class Subnetting {
         }
 
         return index;
+    }
+    //Max bits to display a number
+    private static int getMaxBits(int number){
+        List<Integer> numberList = new ArrayList<>();
+
+        for(int i = 0; i < number; i++){
+            numberList.add(Integer.parseInt(Integer.toBinaryString(i)));
+        }
+
+        numberList.sort(Integer::compareTo);
+
+        return String.valueOf(numberList.get(numberList.size() -1)).length();
     }
     private static void resetChangedIpAddress(){
         int index = getBitIndex();
